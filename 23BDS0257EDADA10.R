@@ -1,0 +1,212 @@
+# Assessment 10: Simple Linear Regression
+
+#23BDS0257
+#1. Load the dataset shared through e-mail and import the ggplot2 library into the R environment.
+library(ggplot2)
+if (!exists("school93_98")) {
+  school93_98 <- read.csv(file.choose(), check.names = FALSE)
+}
+data <- school93_98
+print(head(data, 10))
+str(data)
+
+#23BDS0257
+#2. Identify missing values using is.na() and colSums() and handle them appropriately.
+print(colSums(is.na(data)))
+all_na_cols <- names(data)[sapply(data, function(x) all(is.na(x)))]
+data <- data[, !(names(data) %in% all_na_cols), drop = FALSE]
+for (col in names(data)) {
+  if (is.numeric(data[[col]])) {
+    if (any(is.na(data[[col]]))) {
+      data[[col]][is.na(data[[col]])] <- median(data[[col]], na.rm = TRUE)
+    }
+  }
+}
+print(colSums(is.na(data)))
+
+#23BDS0257
+#3. Identify and remove duplicate records using duplicated() and unique().
+if ("rownames" %in% names(data)) {
+  data$rownames <- NULL
+}
+print(sum(duplicated(data)))
+data <- unique(data)
+print(sum(duplicated(data)))
+
+#23BDS0257
+#4. Detect outliers using the IQR method and visualize them using boxplot().
+numeric_cols <- names(data)[sapply(data, is.numeric)]
+for (col in numeric_cols) {
+  Q1 <- quantile(data[[col]], 0.25, na.rm = TRUE)
+  Q3 <- quantile(data[[col]], 0.75, na.rm = TRUE)
+  IQR_value <- IQR(data[[col]], na.rm = TRUE)
+  lower <- Q1 - 1.5 * IQR_value
+  upper <- Q3 + 1.5 * IQR_value
+  cat(col, "- Outliers:", sum(data[[col]] < lower | data[[col]] > upper, na.rm = TRUE), "\n")
+}
+boxplot(data$exppp, data$math4,
+        names = c("Expenditure per Pupil", "Math Score"),
+        main = "Outlier Detection using IQR - 23BDS0257",
+        col = c("skyblue", "orange"))
+
+#23BDS0257
+#5. Select one numerical independent variable (X) and one numerical dependent variable (Y).
+X <- "exppp"
+Y <- "math4"
+data <- data[!is.na(data[[X]]) & !is.na(data[[Y]]), ]
+cat("Independent Variable:", X, "\n")
+cat("Dependent Variable:", Y, "\n")
+
+#23BDS0257
+#6. Calculate the mean, median, variance, and standard deviation of the selected numerical variables.
+for (col in c(X, Y)) {
+  cat("\nStatistics for", col, "\n")
+  cat("Mean:", mean(data[[col]]), "\n")
+  cat("Median:", median(data[[col]]), "\n")
+  cat("Variance:", var(data[[col]]), "\n")
+  cat("Standard Deviation:", sd(data[[col]]), "\n")
+}
+
+#23BDS0257
+#7. Generate a histogram of the independent variable using hist() and ggplot2.
+hist(data[[X]], main = "Histogram of Expenditure per Pupil - 23BDS0257",
+     xlab = X, col = "skyblue", border = "black")
+print(ggplot(data, aes(x = .data[[X]])) +
+        geom_histogram(bins = 30, fill = "skyblue", color = "black") +
+        labs(title = "Histogram of Expenditure per Pupil - 23BDS0257",
+             x = X, y = "Frequency") + theme_minimal())
+
+#23BDS0257
+#8. Generate a histogram of the dependent variable using ggplot2 and geom_histogram().
+print(ggplot(data, aes(x = .data[[Y]])) +
+        geom_histogram(bins = 30, fill = "orange", color = "black") +
+        labs(title = "Histogram of Mathematics Scores - 23BDS0257",
+             x = Y, y = "Frequency") + theme_minimal())
+
+#23BDS0257
+#9. Visualize the distribution of both variables using geom_density().
+density_data <- rbind(
+  data.frame(Variable = X, Value = data[[X]]),
+  data.frame(Variable = Y, Value = data[[Y]])
+)
+print(ggplot(density_data, aes(x = Value, color = Variable, fill = Variable)) +
+        geom_density(alpha = 0.25) +
+        labs(title = "Density Distribution of X and Y - 23BDS0257",
+             x = "Value", y = "Density") + theme_minimal())
+
+#23BDS0257
+#10. Create boxplots for the selected variables using geom_boxplot().
+box_data <- rbind(
+  data.frame(Variable = X, Value = data[[X]]),
+  data.frame(Variable = Y, Value = data[[Y]])
+)
+print(ggplot(box_data, aes(x = Variable, y = Value, fill = Variable)) +
+        geom_boxplot() +
+        labs(title = "Boxplots of X and Y - 23BDS0257",
+             x = "Variable", y = "Value") + theme_minimal())
+
+#23BDS0257
+#11. Generate a scatter plot between X and Y using plot() and geom_point().
+plot(data[[X]], data[[Y]],
+     main = "Expenditure vs Mathematics Score - 23BDS0257",
+     xlab = X, ylab = Y, pch = 19, col = "blue")
+print(ggplot(data, aes(x = .data[[X]], y = .data[[Y]])) +
+        geom_point(color = "blue", alpha = 0.6) +
+        labs(title = "Expenditure vs Mathematics Score - 23BDS0257",
+             x = X, y = Y) + theme_minimal())
+
+#23BDS0257
+#12. Calculate the Pearson correlation coefficient using cor().
+correlation <- cor(data[[X]], data[[Y]], method = "pearson")
+cat("Pearson Correlation Coefficient:", correlation, "\n")
+
+#23BDS0257
+#13. Visualize the relationship between X and Y using geom_smooth(method = "lm").
+print(ggplot(data, aes(x = .data[[X]], y = .data[[Y]])) +
+        geom_point(alpha = 0.5) +
+        geom_smooth(method = "lm", color = "red", se = TRUE) +
+        labs(title = "Linear Regression Trend - 23BDS0257",
+             x = X, y = Y) + theme_minimal())
+
+#23BDS0257
+#14. Split the dataset into 80% training and 20% testing sets using sample() and set.seed().
+set.seed(257)
+train_indices <- sample(seq_len(nrow(data)),
+                        size = floor(0.8 * nrow(data)))
+train_data <- data[train_indices, ]
+test_data <- data[-train_indices, ]
+cat("Training Rows:", nrow(train_data), "\n")
+cat("Testing Rows:", nrow(test_data), "\n")
+
+#23BDS0257
+#15. Develop a Simple Linear Regression model using the lm() function on the training dataset.
+model <- lm(math4 ~ exppp, data = train_data)
+print(model)
+
+#23BDS0257
+#16. Display the regression model summary using summary() and interpret the coefficients.
+model_summary <- summary(model)
+print(model_summary)
+cat("Intercept:", coef(model)[1], "\n")
+cat("Slope:", coef(model)[2], "\n")
+cat("Interpretation: The intercept is the estimated score when expenditure is zero.\n")
+cat("The slope represents the estimated change in mathematics score for a one-unit increase in expenditure per pupil.\n")
+
+#23BDS0257
+#17. Extract the intercept and slope coefficients using coef().
+coefficients <- coef(model)
+intercept <- coefficients[1]
+slope <- coefficients[2]
+cat("Intercept:", intercept, "\n")
+cat("Slope:", slope, "\n")
+
+#23BDS0257
+#18. Formulate the regression equation using the estimated intercept and slope values.
+cat("Regression Equation: math4 =", intercept, "+", slope, "* exppp\n")
+
+#23BDS0257
+#19. Identify the statistical significance of regression coefficients using their p-values.
+coefficient_table <- model_summary$coefficients
+print(coefficient_table)
+cat("Intercept p-value:", coefficient_table[1, 4], "\n")
+cat("Slope p-value:", coefficient_table[2, 4], "\n")
+if (coefficient_table[2, 4] < 0.05) {
+  cat("The slope is statistically significant at the 5% level.\n")
+} else {
+  cat("The slope is not statistically significant at the 5% level.\n")
+}
+
+#23BDS0257
+#20. Extract the coefficient of determination (R²) and adjusted R² from the model summary.
+cat("R-squared:", model_summary$r.squared, "\n")
+cat("Adjusted R-squared:", model_summary$adj.r.squared, "\n")
+
+#23BDS0257
+#21. Calculate the prediction errors (residuals) by subtracting predicted values from actual values.
+actual <- test_data[[Y]]
+predicted <- predict(model, newdata = test_data)
+residuals_test <- actual - predicted
+print(head(data.frame(Actual = actual, Predicted = predicted,
+                      Residual = residuals_test), 10))
+
+#23BDS0257
+#22. Calculate Mean Absolute Error (MAE) using mean() and abs().
+MAE <- mean(abs(residuals_test))
+cat("Mean Absolute Error (MAE):", MAE, "\n")
+
+#23BDS0257
+#23. Calculate Mean Squared Error (MSE) using mean() and squared residuals.
+MSE <- mean(residuals_test^2)
+cat("Mean Squared Error (MSE):", MSE, "\n")
+
+#23BDS0257
+#24. Calculate Root Mean Squared Error (RMSE) using sqrt() and mean().
+RMSE <- sqrt(mean(residuals_test^2))
+cat("Root Mean Squared Error (RMSE):", RMSE, "\n")
+
+#23BDS0257
+#25. Calculate Mean Absolute Percentage Error (MAPE), excluding observations with zero actual values.
+nonzero <- actual != 0
+MAPE <- mean(abs((actual[nonzero] - predicted[nonzero]) /
+                   actual[nonzero])) * 100
+cat("Mean Absolute Percentage Error (MAPE):", MAPE, "%\n")
